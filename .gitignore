@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Rendered output and figures
+out/
+*.ppm
+*.pgm
+
+# Datasets and converted binaries -- never commit these
+data/
+*.aedat
+*.aedat4
+*.raw
+*.hdf5
+*.h5
+*.npy
+*.bin
+
+.DS_Store
+.idea/
+.vscode/
