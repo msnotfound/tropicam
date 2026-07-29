@@ -61,11 +61,32 @@ def main() -> int:
     for method in ("sort", "ufunc"):
         rate = bench(ev, args.height, args.width, args.batch, method)
         results[method] = rate
-        print(f"  {method:6s}  {rate/1e6:7.2f} M events/s   "
+        print(f"  numpy/{method:6s}  {rate/1e6:7.2f} M events/s   "
               f"{1e9/rate:6.1f} ns/event")
 
-    if results["ufunc"] > 0:
-        print(f"\n  sort is {results['sort']/results['ufunc']:.1f}x the ufunc path")
+    try:
+        import tropicam_rs
+    except ImportError:
+        print("\n  (rust core not built -- run scripts/build_rust.sh)")
+    else:
+        raw = ev.view(np.uint8)
+        stride = args.batch * ev.dtype.itemsize
+        best = float("inf")
+        for _ in range(3):
+            ts = tropicam_rs.TimeSurface(args.height, args.width, 2)
+            t0 = time.perf_counter()
+            for i in range(0, raw.size, stride):
+                ts.update_bytes(raw[i:i + stride])
+            best = min(best, time.perf_counter() - t0)
+        results["rust"] = ev.size / best
+        print(f"  rust          {results['rust']/1e6:7.2f} M events/s   "
+              f"{1e9/results['rust']:6.1f} ns/event")
+        print(f"\n  rust is {results['rust']/results['sort']:.1f}x the best "
+              f"numpy path")
+
+    print("\n  NumPy needs an O(n log n) sort per batch to make scatter-max\n"
+          "  correct; the Rust core is a compare-and-store, i.e. strictly\n"
+          "  constant work per event.")
 
     # Per-batch latency distribution -- the p99 plot the doc cares about. Note
     # there is no periodic spike here by construction: no rolling epoch means

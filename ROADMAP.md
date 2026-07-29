@@ -27,8 +27,33 @@ have numbers.**
       regimes + known crease).
 - [x] NumPy time surface: uint32, wrapping age, no rolling epoch, scatter-max.
 - [x] Duplicate-pixel test — the footgun the oracle cannot catch.
-- [x] Throughput ceiling measured (~8 M events/s ingest, 1280x720).
+- [x] Throughput ceiling measured (NumPy: ~14 M events/s ingest, 1280x720).
 - [x] Visualiser (dependency-free PPM).
+
+## Native core (brought forward from weeks 7-8)
+
+The submitted project scope commits to a **C++/Rust engine with Python
+bindings** as the deliverable, and to **strictly O(1) work per event**. Both
+are properties of the native core, so it moved ahead of schedule -- but only
+*after* the NumPy pipeline was correct and demoable, which is what the doc's
+"native-first trap" warning actually guards against.
+
+- [x] `crates/tropicam-core`: `Event` (repr(C, packed), ABI-matched to the
+      NumPy dtype) and `TimeSurface` with compare-and-store ingest -- constant
+      work per event, no allocation, no sort.
+- [x] `crates/tropicam-py`: PyO3 bindings, zero-copy events via the buffer
+      protocol. Built with plain cargo; maturin not required.
+- [x] Differential parity suite: Rust == NumPy bit for bit on every oracle
+      scene, under noise, under adversarial duplicate pressure, across batch
+      boundaries and shuffling.
+- [x] **157 M events/s, 6.4 ns/event** (11x the best NumPy path).
+- [ ] Max-plus morphology in the core (erosion/dilation/opening) once the
+      NumPy versions exist to check against.
+- [ ] p99 latency histograms from the native path.
+- [ ] Consider building on **PALMA** (N'guessan 2026, MIT, dependency-free C
+      tropical linear algebra) rather than reimplementing. The engineering
+      novelty of "tropical algebra runs fast on a CPU" is already gone; all
+      novelty must live in the vision formulation and the certificate.
 - [ ] One real DVS-Gesture sequence rendering end to end. Start on DVS-Gesture,
       **not** DSEC — DSEC is enormous. Convert to a flat binary of packed
       structs and mmap it; don't write parsers, use `tonic`.
@@ -77,10 +102,13 @@ have numbers.**
 
 ## Weeks 7-8 — performance
 
-- [ ] Port the identified hot loop to Rust or C++ **if** p99 is a headline
-      metric. Not Go — GC pauses land in exactly the plot that matters.
+Core ingest already ported (see above). Remaining:
+
+- [ ] Port the flow and regime operators once they exist and their NumPy
+      versions can serve as parity oracles.
 - [ ] Benchmark harness, latency histograms. All framed as *processing*
       latency.
+- [ ] Real-time visualisation interface (committed in the project scope).
 
 ## Weeks 9-10 — writeup
 

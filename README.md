@@ -24,35 +24,78 @@ Build status and next steps: [`ROADMAP.md`](ROADMAP.md).
 
 ## Status
 
-Week 1 scaffold. The synthetic oracle and the time surface are built and
-tested; no flow estimator yet.
+Week 1-2. Synthetic oracle, time surface, and the native Rust core with Python
+bindings are built and tested. No flow estimator yet.
+
+**Ingest: 157 M events/s, 6.4 ns/event** at 1280x720 (Rust core, 11x the best
+NumPy path). Processing throughput on replayed streams -- see the note on
+latency claims below.
 
 ## Quick start
 
-Requires Python 3.10+ and numpy. Nothing else.
+Python 3.11+ and numpy. The pure-Python path needs nothing else.
 
 ```bash
-python3 tests/test_time_surface.py     # 8 tests
-python3 tests/test_synthetic.py        # 7 tests
+python3 tests/test_time_surface.py     # 8 tests  (numpy reference)
+python3 tests/test_synthetic.py        # 7 tests  (oracle)
 python3 scripts/demo_oracle.py         # renders time surfaces to out/*.ppm
-python3 scripts/bench_time_surface.py  # ingest throughput
 ```
 
-`pytest tests/` also works if you have it; the suites are written to run both
-ways so nothing is gated on an install.
+For the native core, a Rust toolchain (1.70+):
+
+```bash
+./scripts/build_rust.sh                # cargo test + build + install the .so
+python3 tests/test_rust_parity.py      # 9 tests  (rust == numpy, bit for bit)
+python3 scripts/bench_time_surface.py  # numpy vs rust throughput
+```
+
+`pytest tests/` also works if you have it; suites run both ways, and the
+parity suite skips cleanly when the extension isn't built, so nothing is gated
+on an install.
 
 ## Layout
 
 ```
-src/tropicam/
-  events.py        event stream dtype and helpers
-  time_surface.py  T <- max(T, t), the max-plus accumulator
-  synthetic.py     analytic-ground-truth scenes + perturbations
-  render.py        dependency-free PPM visualisation
-tests/             correctness, including the named footguns
-scripts/           demo and benchmark entry points
-docs/              the master project document
+crates/tropicam-core/   native engine -- no Python dependency
+  events.rs             Event, ABI-compatible with the NumPy dtype
+  time_surface.rs       T <- max(T, t), O(1) per event
+crates/tropicam-py/     PyO3 bindings, marshalling only
+src/tropicam/           NumPy reference implementation
+  events.py             event stream dtype and helpers
+  time_surface.py       the max-plus accumulator
+  synthetic.py          analytic-ground-truth scenes + perturbations
+  render.py             dependency-free PPM visualisation
+tests/                  correctness, footguns, and rust/numpy parity
+scripts/                build, demo, and benchmark entry points
+docs/                   the master project document
 ```
+
+## Two implementations, on purpose
+
+The NumPy package is **not** dead prototype code. It is the *executable
+specification*: small enough to audit by eye, validated against the analytic
+oracle, and differentially tested against the Rust core on every oracle scene
+plus adversarial duplicate-pressure streams (`tests/test_rust_parity.py`).
+Where the two disagree, one of them is a bug.
+
+Events cross the FFI boundary **zero-copy**. NumPy's packed structured dtype
+is 9 bytes at offsets 0/2/4/8; the Rust `Event` is `#[repr(C, packed)]` to
+match exactly, and both sides assert the layout so drift fails loudly instead
+of silently misreading every field.
+
+## Why the native core is not just "faster"
+
+It changes what can be claimed, which is the point.
+
+A correct scatter-max in NumPy needs `np.maximum.at` (unbuffered, slow) or a
+lexsort-and-reduce -- **O(n log n)** in the batch, because vectorised
+fancy-index assignment resolves duplicate pixels by last write rather than by
+max. In Rust the same operation is a load, a compare, and a conditional
+store: no sort, no allocation, no batching required.
+
+That is **strictly constant work per event**, independent of batch size,
+resolution, and stream history. The NumPy path cannot make that claim at all;
+it was always standing in for this.
 
 ## The three oracle scenes
 
@@ -86,8 +129,10 @@ with one analytically known crease.
   never catch it; `test_duplicate_pixels_within_batch_take_the_max` does.
 - **Separate ON/OFF polarity planes.** ~7.4 MB at 1280x720. Merging is a max
   across planes (tropical addition), never an average.
-- **NumPy first.** Porting the hot loop to Rust/C++ comes after the pipeline is
-  correct and the demo runs, not before.
+- **NumPy first, then Rust.** The native port landed only after the pipeline was
+  correct and the demo ran -- so the reference implementation could become the
+  parity oracle instead of being thrown away. Rust, not Go: GC pauses would
+  land in exactly the p99 plot the engine is judged on.
 
 ## Honest scoping
 

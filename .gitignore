@@ -28,3 +28,12 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# Rust build artefacts
+target/
+**/*.rs.bk
+
+# Compiled extension module (built by scripts/build_rust.sh)
+*.so
+*.pyd
+*.dylib

@@ -1,0 +1,8 @@
+[package]
+name = "tropicam-core"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "Deterministic max-plus event-vision primitives"
+
+[dependencies]

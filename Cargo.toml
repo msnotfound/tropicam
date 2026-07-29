@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/tropicam-core", "crates/tropicam-py"]
+
+[profile.release]
+# The engine's selling point is worst-case per-event work, so tune for
+# consistency and let the optimiser see the whole crate graph.
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# Deliberately NOT panic = "abort": this builds a Python extension module, and
+# aborting would take the host interpreter down instead of raising a Python
+# exception. PyO3 needs to catch panics at the boundary.
+panic = "unwind"

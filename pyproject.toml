@@ -7,7 +7,7 @@ name = "tropicam"
 version = "0.0.1"
 description = "Deterministic, CPU-only, training-free event-vision engine over the tropical (max-plus) semiring"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = ["numpy>=1.24"]
 
