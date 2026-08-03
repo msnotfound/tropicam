@@ -2,6 +2,10 @@
 
 Derived from the master doc, section 9. Ten-week window.
 
+**Read [`HAZARDS.md`](HAZARDS.md) before writing paper text or reporting any
+number.** It corrects the master doc in two places (E2's metric, and the
+mismatch model's conditioning) and lists what must not be claimed.
+
 **Hard rule (doc section 10): no theorem section gets written before E2 and E3
 have numbers.**
 
@@ -83,6 +87,18 @@ are properties of the native core, so it moved ahead of schedule -- but only
 
 ## Weeks 4-6 — C1 derivation (the paper's core)
 
+- [ ] **Resolve H1 first**: mismatch is a *rate* effect (`C_i / r`), not a
+      constant offset. The surface's max-recency bounds it at ~one inter-event
+      interval, but the bound scales as `sigma_C / r` and diverges as `r -> 0`.
+      Condition the theorem on a contrast-rate floor or state it per-region.
+- [ ] **Resolve H2**: L-inf plane fitting is an LP, not a closed form.
+      Residuation is closed form but one-sided. Settle which the estimator is
+      before writing it.
+- [ ] **Resolve H3**: derive the bound for the pipeline *including* the
+      opening, or ship un-opened. Do not certify one system and ship another.
+- [ ] Chase H16: same-pixel temporal differences cancel the static offset
+      exactly. An "exact on this component, bounded on that one" split is far
+      stronger than a single global bound.
 - [ ] Formalise: mismatch -> bounded additive offset field on the time axis.
 - [ ] Flat structuring element -> non-flat structuring **function** (Maragos).
 - [ ] Closed-form bound on output deviation as a function of mismatch magnitude.
